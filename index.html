@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Monthly Salary & LOP Calculator</title>
+  <link rel="icon" href="favicon.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="favicon.webp">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button, input, select {
+      touch-action: manipulation;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+      html, body {
+        background: #fff !important;
+        color: #0f172a !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      /* Paper width is below Tailwind's lg breakpoint, so #section-summary
+         stays display:none from `hidden lg:block` unless we override it. */
+      header,
+      #section-calendar,
+      #status-banner,
+      #day-picker-overlay,
+      #settings-overlay,
+      #salary-onboarding-overlay,
+      #mobile-bottom-bar {
+        display: none !important;
+      }
+      main,
+      main > .grid,
+      #section-summary {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        float: none !important;
+      }
+      #section-summary > *:not(#printable-payslip) {
+        display: none !important;
+      }
+      #printable-payslip,
+      #printable-payslip * {
+        visibility: visible !important;
+      }
+      #printable-payslip {
+        display: block !important;
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        break-inside: avoid;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.03);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.15);
+      border-radius: 4px;
+    }
+
+    /* Day status picker — always centered */
+    #day-picker-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    }
+    #day-picker-overlay.hidden {
+      display: none !important;
+    }
+    #day-picker-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
+    #day-picker-overlay.is-open #day-picker-backdrop {
+      opacity: 1;
+    }
+    #day-picker-panel {
+      position: relative;
+      width: min(380px, 100%);
+      background: #fff;
+      border-radius: 20px;
+      padding: 16px;
+      transform: scale(0.94) translateY(10px);
+      opacity: 0;
+      transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
+      max-height: min(86vh, 640px);
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+      -webkit-overflow-scrolling: touch;
+    }
+    #day-picker-overlay.is-open #day-picker-panel {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    /* Settings panel */
+    #settings-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    }
+    #settings-overlay.hidden {
+      display: none !important;
+    }
+    #settings-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
+    #settings-overlay.is-open #settings-backdrop {
+      opacity: 1;
+    }
+    #settings-panel {
+      position: relative;
+      width: min(520px, 100%);
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      transform: scale(0.94) translateY(10px);
+      opacity: 0;
+      transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
+      max-height: min(90vh, 720px);
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+      -webkit-overflow-scrolling: touch;
+    }
+    #settings-overlay.is-open #settings-panel {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+    .day-status-opt {
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    .day-status-opt:active {
+      transform: scale(0.97);
+    }
+    .day-status-opt:disabled,
+    .day-status-opt:disabled:hover,
+    .day-status-opt:disabled:active {
+      transform: none;
+      box-shadow: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .day-status-opt:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      }
+    }
+    .cal-day-open {
+      outline: 3px solid #3b82f6;
+      outline-offset: 2px;
+      z-index: 2;
+    }
+
+    /* Mobile salary onboarding */
+    #salary-onboarding-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    }
+    #salary-onboarding-overlay.hidden {
+      display: none !important;
+    }
+    #salary-onboarding-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    #salary-onboarding-panel {
+      position: relative;
+      width: min(400px, 100%);
+      background: #fff;
+      border-radius: 24px;
+      padding: 24px 20px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+    }
+
+    /* Mobile sticky bottom bar */
+    #mobile-bottom-bar {
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    }
+    @media (max-width: 1023px) {
+      body.mobile-ready {
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+      }
+      #mobile-main-content.hidden-until-salary,
+      #mobile-bottom-bar.hidden-until-salary {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white pb-0 lg:pb-0">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5 sm:space-x-3">
+        <div class="bg-gradient-to-tr from-brand-600 to-indigo-600 p-2 sm:p-2.5 rounded-xl text-white shadow-md shadow-brand-500/20">
+          <i data-lucide="calendar-check" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">
+            CalPay Pro
+          </h1>
+          <p class="text-[10px] sm:text-xs text-slate-500 font-medium hidden xs:block">Interactive Calendar Salary & LOP Calculator</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button type="button" onclick="openSettings()" class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center space-x-1" title="Payroll settings">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Settings</span>
+        </button>
+        <button id="reset-btn" onclick="resetCalculator()" class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center space-x-1">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Reset</span>
+        </button>
+        <button id="print-btn" onclick="printPayslip()" class="hidden lg:flex px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition-all items-center space-x-1.5">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span class="hidden xs:inline">Print Payslip</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="mobile-main-content" class="hidden-until-salary flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+    <!-- Top Configuration Bar (desktop only — mobile uses onboarding popup + settings) -->
+    <div class="hidden lg:block bg-white rounded-2xl p-3.5 sm:p-5 shadow-sm border border-slate-200/80 no-print">
+      <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+        <div class="flex-1 min-w-0">
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1">
+            <i data-lucide="wallet" class="w-3.5 h-3.5 text-brand-600"></i>
+            <span>Monthly Base Salary <span class="text-rose-500">*</span></span>
+          </label>
+          <div class="flex rounded-lg shadow-sm">
+            <select id="currency-select" class="bg-slate-100 border border-r-0 border-slate-300 rounded-l-lg px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none">
+              <option value="₹">₹ (INR)</option>
+              <option value="$">$ (USD)</option>
+              <option value="€">€ (EUR)</option>
+              <option value="£">£ (GBP)</option>
+              <option value="AED">AED</option>
+              <option value="R$">R$</option>
+            </select>
+            <input type="number" id="monthly-salary" min="0" step="1000" value="" placeholder="Enter salary" class="w-full bg-slate-50 border border-slate-300 rounded-r-lg px-2.5 py-2 text-sm font-extrabold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+        </div>
+        <button type="button" onclick="openSettings()" class="shrink-0 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg px-4 py-2 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors">
+          <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span>Payroll Settings</span>
+        </button>
+      </div>
+      <p id="settings-summary" class="mt-2.5 text-[11px] text-slate-500 font-medium flex items-center gap-1.5 flex-wrap">
+        <i data-lucide="info" class="w-3 h-3 shrink-0"></i>
+        <span>26th–25th cycle · 2.0 paid leave days · Cycle-day wage rule</span>
+      </p>
+    </div>
+
+    <!-- Status Banner Alert (desktop only) -->
+    <div id="status-banner" class="hidden lg:block rounded-2xl border p-3.5 sm:p-4 transition-all duration-300 no-print">
+      <!-- Injected via JS -->
+    </div>
+
+    <!-- MAIN CONTENT GRID: Left (Interactive Calendar) - Right (Salary Summary & Payslip) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      
+      <!-- LEFT COLUMN: Primary Interactive Calendar (7 Cols) -->
+      <div id="section-calendar" class="lg:col-span-7 space-y-4 no-print">
+        
+        <div class="bg-white rounded-2xl p-3.5 sm:p-5 shadow-sm border border-slate-200/80 space-y-3.5 sm:space-y-4">
+          
+          <!-- Month Selector Header -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3 sm:pb-4">
+            <div class="flex items-center justify-between sm:justify-start space-x-2">
+              <div class="flex items-center space-x-1 sm:space-x-2">
+                <button onclick="changeMonth(-1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Previous Month">
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <h2 id="current-month-label" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight text-center sm:text-left min-w-[140px] sm:min-w-[160px]">
+                  August 2026
+                </h2>
+                <button onclick="changeMonth(1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Next Month">
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+              </div>
+              <button onclick="goToCurrentMonth()" class="px-2.5 py-1 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg border border-brand-200 transition-colors">
+                Today
+              </button>
+            </div>
+
+            <!-- Live Calendar Day Counter Pills -->
+            <div class="flex flex-wrap items-center gap-1 text-[10px] sm:text-[11px] font-semibold justify-center sm:justify-end">
+              <span class="px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
+                <span>💼</span> <span id="cnt-work">0 Work</span>
+              </span>
+              <span class="px-1.5 sm:px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 flex items-center space-x-1">
+                <span>🌴</span> <span id="cnt-paid">0 Paid</span>
+              </span>
+              <span class="px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1">
+                <span>⚠️</span> <span id="cnt-lop">0 LOP</span>
+              </span>
+              <span class="px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 flex items-center space-x-1">
+                <span>🏖️</span> <span id="cnt-weekend">0 Off</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Tap-a-day hint + compact legend -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-brand-50/70 border border-brand-100 px-2.5 py-2">
+            <p class="text-[11px] sm:text-xs font-semibold text-brand-800 flex items-center gap-1.5">
+              <i data-lucide="hand-pointer" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>Tap any calendar day to set Work, Paid Leave, LOP, Holiday, or Off. Default off: Sundays + 2nd &amp; 4th Saturdays</span>
+            </p>
+            <div class="flex flex-wrap items-center gap-1 text-[9px] sm:text-[10px] font-bold">
+              <span class="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white">Work</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-blue-500 text-white">Paid</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-rose-500 text-white">LOP</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-amber-500 text-white">0.5</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-purple-500 text-white">Holiday</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600">Off</span>
+            </div>
+          </div>
+
+          <!-- Quick Presets Row -->
+          <div class="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100">
+            <span class="text-[10px] sm:text-[11px] font-bold text-slate-500">Presets:</span>
+            <div class="flex flex-wrap items-center gap-1 sm:gap-1.5">
+              <button onclick="applyPreset('std_off')" class="px-2 py-1 text-[10px] sm:text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold border border-slate-200 transition-colors">
+                2nd &amp; 4th Sat Off
+              </button>
+              <button onclick="applyPreset('mon_fri')" class="px-2 py-1 text-[10px] sm:text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold border border-slate-200 transition-colors">
+                Mon-Fri Work
+              </button>
+              <button onclick="applyPreset('mon_sat')" class="px-2 py-1 text-[10px] sm:text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold border border-slate-200 transition-colors">
+                Mon-Sat Work
+              </button>
+              <button onclick="autoApplyPaidQuota()" class="px-2 py-1 text-[10px] sm:text-[11px] bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg font-bold border border-brand-200 transition-colors flex items-center space-x-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                <span>Auto-Cover Paid</span>
+              </button>
+              <button onclick="resetMonthToWork()" class="px-2 py-1 text-[10px] sm:text-[11px] bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 rounded-lg font-semibold transition-colors">
+                All Work
+              </button>
+            </div>
+          </div>
+
+          <!-- THE INTERACTIVE CALENDAR GRID -->
+          <div id="calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-xs pt-1 select-none">
+            <!-- Dynamically generated calendar cells -->
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Salary Breakdown & Payslip (5 Cols) -->
+      <div id="section-summary" class="lg:col-span-5 space-y-4 hidden lg:block">
+
+        <!-- Dynamic Live Overview Cards Grid -->
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+          
+          <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monthly Base</p>
+            <p id="stat-base" class="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">₹0.00</p>
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-medium">Gross Salary</span>
+          </div>
+
+          <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Per Day Wage</p>
+            <p id="stat-per-day" class="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">₹1,612.90</p>
+            <span id="stat-divisor-label" class="text-[9px] sm:text-[10px] text-slate-400 font-medium">÷ 31 Calendar Days</span>
+          </div>
+
+          <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-amber-200 bg-amber-50/30 shadow-sm">
+            <p class="text-[10px] sm:text-[11px] font-bold text-amber-800 uppercase tracking-wider">LOP Days</p>
+            <p id="stat-lop-count" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-0.5">0 Days</p>
+            <span id="stat-lop-amt" class="text-[9px] sm:text-[10px] text-amber-700 font-bold">Deduction: ₹0.00</span>
+          </div>
+
+          <div class="bg-gradient-to-br from-brand-600 to-indigo-700 text-white p-3.5 sm:p-4 rounded-2xl shadow-md">
+            <p class="text-[10px] sm:text-[11px] font-bold text-brand-100 uppercase tracking-wider">Net Payable</p>
+            <p id="stat-net" class="text-xl sm:text-2xl font-black text-white mt-0.5">₹0.00</p>
+            <span class="text-[9px] sm:text-[10px] text-brand-200 font-medium">Final Monthly Salary</span>
+          </div>
+
+        </div>
+
+        <!-- Visual Days Breakdown Bar -->
+        <div class="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-700">Days Distribution Breakdown</span>
+            <span id="bar-total-days" class="text-slate-400 font-medium">31 Days</span>
+          </div>
+
+          <div class="w-full bg-slate-100 h-3 sm:h-3.5 rounded-full overflow-hidden flex shadow-inner">
+            <div id="bar-work" class="bg-emerald-500 h-full transition-all duration-300" style="width: 70%" title="Work Days"></div>
+            <div id="bar-paid" class="bg-blue-400 h-full transition-all duration-300" style="width: 10%" title="Paid Leaves"></div>
+            <div id="bar-lop" class="bg-rose-500 h-full transition-all duration-300" style="width: 10%" title="LOP Days"></div>
+            <div id="bar-holiday" class="bg-purple-400 h-full transition-all duration-300" style="width: 10%" title="Holidays"></div>
+          </div>
+
+          <div class="grid grid-cols-2 text-[10px] sm:text-[11px] gap-1 pt-1 text-slate-600">
+            <div>• Worked: <strong id="lbl-worked" class="text-slate-900">22.0 d</strong></div>
+            <div>• Paid Leaves: <strong id="lbl-paid" class="text-slate-900">2.0 d</strong></div>
+            <div>• LOP Unpaid: <strong id="lbl-lop" class="text-rose-600 font-bold">0.0 d</strong></div>
+            <div>• Paid Quota Left: <strong id="lbl-left" class="text-emerald-700 font-bold">0.0 d</strong></div>
+          </div>
+        </div>
+
+        <!-- Official Itemized Payslip Card -->
+        <div id="printable-payslip" class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 space-y-3.5 sm:space-y-4">
+          
+          <div class="flex items-center justify-between border-b border-slate-200 pb-3 sm:pb-4">
+            <div>
+              <span class="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-brand-50 text-brand-700 border border-brand-200 inline-block mb-1">Calculation Statement</span>
+              <h3 class="text-sm sm:text-base font-bold text-slate-900">Monthly Salary & LOP Statement</h3>
+              <p id="slip-month-name" class="text-[11px] sm:text-xs text-slate-500 font-medium">Month: August 2026</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[9px] sm:text-[10px] text-slate-400 block">Generated Date</span>
+              <span id="slip-gen-date" class="text-xs font-semibold text-slate-700"></span>
+            </div>
+          </div>
+
+          <!-- Payslip Parameters Table -->
+          <div class="space-y-2.5 sm:space-y-3">
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100">
+              <span class="text-slate-500">Gross Monthly Salary</span>
+              <span id="slip-gross" class="font-bold text-slate-900">₹0.00</span>
+            </div>
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100">
+              <span class="text-slate-500">Daily Wage Basis</span>
+              <span id="slip-basis" class="font-semibold text-slate-800">₹1,612.90 / day</span>
+            </div>
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100">
+              <span class="font-semibold text-slate-700">Total Days Worked / Paid</span>
+              <span id="slip-worked-count" class="font-semibold text-slate-900">22 Days</span>
+            </div>
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100">
+              <span class="font-semibold text-emerald-700">Paid Leaves Applied</span>
+              <span id="slip-paid-count" class="font-semibold text-emerald-700">2 Days</span>
+            </div>
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100 bg-rose-50/50 px-2 rounded">
+              <span class="font-bold text-rose-700">Loss of Pay (LOP) Days</span>
+              <span id="slip-lop-days" class="font-bold text-rose-700">0 Days</span>
+            </div>
+            <div class="flex justify-between text-xs py-1 border-b border-slate-100 bg-rose-50/50 px-2 rounded">
+              <span class="font-bold text-rose-700">Total LOP Deduction</span>
+              <span id="slip-lop-deduction" class="font-bold text-rose-600">-₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Final Net Payable Highlight -->
+          <div class="bg-slate-900 text-white rounded-xl p-3.5 sm:p-4 flex items-center justify-between">
+            <div>
+              <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Final Net Salary</p>
+              <p class="text-[10px] sm:text-[11px] text-slate-400">After LOP & Adjustments</p>
+            </div>
+            <span id="slip-net-final" class="text-xl sm:text-2xl font-black text-emerald-400">₹0.00</span>
+          </div>
+
+        </div>
+
+        <!-- Saved Calculation Records -->
+        <div class="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-slate-200 no-print">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center space-x-1">
+              <i data-lucide="bookmark" class="w-3.5 h-3.5 text-brand-600"></i>
+              <span>Saved Calculations</span>
+            </h4>
+            <button onclick="saveCurrentMonthRecord()" class="text-xs text-brand-600 font-bold hover:underline">
+              + Save Month
+            </button>
+          </div>
+          <div id="history-container" class="space-y-1.5 max-h-36 overflow-y-auto">
+            <p class="text-xs text-slate-400 italic">No saved month records yet.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Mobile sticky bottom bar: net pay + print -->
+  <div id="mobile-bottom-bar" class="hidden-until-salary lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] no-print">
+    <div class="max-w-7xl mx-auto px-3 py-3 flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Net Payable</p>
+        <p id="mobile-stat-net" class="text-xl font-black text-emerald-600 leading-tight truncate">₹0.00</p>
+        <p id="mobile-stat-sub" class="text-[10px] font-semibold text-slate-500 truncate">Tap calendar days to calculate</p>
+      </div>
+      <button type="button" onclick="printPayslip()" class="shrink-0 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold px-4 py-3 rounded-xl shadow-sm transition-all flex flex-col items-center justify-center min-w-[72px]">
+        <i data-lucide="printer" class="w-5 h-5"></i>
+        <span class="text-[10px] font-bold mt-0.5">Print</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile salary onboarding popup -->
+  <div id="salary-onboarding-overlay" class="lg:hidden hidden no-print" aria-hidden="true">
+    <div id="salary-onboarding-backdrop"></div>
+    <div id="salary-onboarding-panel" role="dialog" aria-modal="true" aria-labelledby="salary-onboarding-title">
+      <div class="text-center mb-5">
+        <div class="inline-flex bg-gradient-to-tr from-brand-600 to-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-brand-500/25 mb-3">
+          <i data-lucide="wallet" class="w-7 h-7"></i>
+        </div>
+        <h2 id="salary-onboarding-title" class="text-xl font-extrabold text-slate-900">Enter Monthly Salary</h2>
+        <p class="text-xs text-slate-500 font-medium mt-1">Start by entering your base salary. Then mark days on the calendar.</p>
+      </div>
+
+      <label class="block text-xs font-bold text-slate-700 mb-1.5">Monthly Base Salary <span class="text-rose-500">*</span></label>
+      <div class="flex rounded-xl shadow-sm mb-1">
+        <select id="mobile-currency-select" class="bg-slate-100 border border-r-0 border-slate-300 rounded-l-xl px-2.5 py-3 text-sm font-bold text-slate-700 focus:outline-none">
+          <option value="₹">₹ (INR)</option>
+          <option value="$">$ (USD)</option>
+          <option value="€">€ (EUR)</option>
+          <option value="£">£ (GBP)</option>
+          <option value="AED">AED</option>
+          <option value="R$">R$</option>
+        </select>
+        <input type="number" id="mobile-salary-input" min="0" step="1000" inputmode="decimal" placeholder="e.g. 50000" class="w-full bg-slate-50 border border-slate-300 rounded-r-xl px-3 py-3 text-lg font-extrabold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+      </div>
+      <p id="salary-onboarding-error" class="hidden text-xs font-semibold text-rose-600 mb-3">Please enter a valid salary amount.</p>
+
+      <button type="button" onclick="submitSalaryOnboarding()" class="w-full bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold py-3.5 rounded-xl text-sm shadow-md transition-all flex items-center justify-center space-x-2">
+        <span>Continue to Calendar</span>
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </button>
+      <p class="text-[10px] text-center text-slate-400 font-medium mt-3">Payroll rules can be changed anytime from Settings</p>
+    </div>
+  </div>
+
+  <!-- Payroll Settings Panel -->
+  <div id="settings-overlay" class="hidden no-print" aria-hidden="true">
+    <div id="settings-backdrop" onclick="closeSettings()"></div>
+    <div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Configuration</p>
+          <h3 id="settings-title" class="text-lg font-extrabold text-slate-900">Payroll Settings</h3>
+          <p class="text-[11px] font-medium text-slate-500 mt-0.5">Adjust cycle, leave quota, wage rules, bulk date range, and adjustments.</p>
+        </div>
+        <button type="button" onclick="closeSettings()" class="shrink-0 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" aria-label="Close settings">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="lg:hidden pt-1 pb-2 border-b border-slate-100">
+          <button type="button" onclick="openSalaryOnboarding(true)" class="w-full bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg px-3 py-2 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors">
+            <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+            <span>Edit Monthly Salary</span>
+          </button>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Payroll Cycle Period</span>
+          </label>
+          <select id="payroll-cycle" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2.5 text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="26_to_25" selected>26th to 25th (e.g. 26 Jul - 25 Aug)</option>
+            <option value="standard">Standard Month (1st - 31st)</option>
+            <option value="21_to_20">21st to 20th (e.g. 21 Jul - 20 Aug)</option>
+            <option value="16_to_15">16th to 15th (e.g. 16 Jul - 15 Aug)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1">
+            <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Available Paid Leave Quota</span>
+          </label>
+          <div class="relative">
+            <input type="number" id="paid-quota" min="0" step="0.5" value="2.0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-extrabold text-emerald-700 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">Days</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1">
+            <i data-lucide="calculator" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>Daily Wage Basis Rule</span>
+          </label>
+          <select id="basis-rule" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="calendar">Total Cycle Days (Salary ÷ Cycle Days)</option>
+            <option value="working">Worked Days Only (Salary ÷ Work Days)</option>
+            <option value="fixed30">Fixed 30 Days Rule (Salary ÷ 30 Days)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100">
+          <p class="text-xs font-bold text-slate-700 mb-2 flex items-center space-x-1">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span>Allowances / Tax (-/+)</span>
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Additional Allowances (+ Bonus, HRA)</label>
+              <input type="number" id="allowances" min="0" value="0" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Standard Deductions (- Tax, PF, Insurance)</label>
+              <input type="number" id="deductions" min="0" value="0" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-bold text-slate-700 flex items-center space-x-1">
+              <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-brand-600"></i>
+              <span>Select Range (From Date to End Date)</span>
+            </p>
+            <label class="flex items-center space-x-1 cursor-pointer text-[11px] font-semibold text-slate-600">
+              <input type="checkbox" id="range-exclude-weekends" checked class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+              <span>Skip Off Days</span>
+            </label>
+          </div>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">From Day</label>
+                <select id="range-from" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">To Day</label>
+                <select id="range-to" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Set Status As</label>
+              <select id="range-status" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="work">💼 Work Day (1.0)</option>
+                <option value="paid_leave">🌴 Paid Leave (1.0)</option>
+                <option value="lop">⚠️ LOP Unpaid (1.0)</option>
+                <option value="half_lop">0.5 LOP</option>
+                <option value="half_paid">0.5 Paid Leave</option>
+                <option value="holiday">🎉 Holiday (1.0)</option>
+                <option value="weekend">🏖️ Weekend / Off</option>
+              </select>
+            </div>
+
+            <button type="button" onclick="applyDateRange()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2.5 rounded-lg text-xs shadow-sm transition-all flex items-center justify-center space-x-1">
+              <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+              <span>Apply Range</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" onclick="closeSettings()" class="mt-5 w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-sm transition-all">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Day status picker: bottom sheet on mobile, popover on desktop -->
+  <div id="day-picker-overlay" class="hidden no-print" aria-hidden="true">
+    <div id="day-picker-backdrop" onclick="closeDayPicker()"></div>
+    <div id="day-picker-panel" role="dialog" aria-modal="true" aria-labelledby="day-picker-title">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Set day status</p>
+          <h3 id="day-picker-title" class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Select a day</h3>
+          <p id="day-picker-current" class="text-[11px] font-semibold text-slate-500 mt-0.5">Current: —</p>
+        </div>
+        <button type="button" onclick="closeDayPicker()" class="shrink-0 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" aria-label="Close">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="day-picker-options" class="grid grid-cols-2 gap-2"></div>
+    </div>
+  </div>
+
+  <script>
+    // Global State
+    let currentDate = new Date(); // Tracks selected year and month
+    let pickerDateKey = null;
+    let pickerAnchorEl = null;
+    let pickerCloseTimer = null;
+
+    const DAY_STATUS_OPTIONS = [
+      { id: 'work', emoji: '💼', label: 'Work', hint: 'Full working day', classes: 'bg-emerald-50 border-emerald-200 text-emerald-900', active: 'ring-2 ring-emerald-400 bg-emerald-100' },
+      { id: 'paid_leave', emoji: '🌴', label: 'Paid Leave', hint: 'Paid time off', classes: 'bg-blue-50 border-blue-200 text-blue-900', active: 'ring-2 ring-blue-400 bg-blue-100', requiresPaidQuota: true },
+      { id: 'lop', emoji: '⚠️', label: 'LOP Unpaid', hint: 'Full day unpaid', classes: 'bg-rose-50 border-rose-200 text-rose-900', active: 'ring-2 ring-rose-400 bg-rose-100' },
+      { id: 'half_lop', emoji: '🌘', label: 'LOP 0.5', hint: 'Half day unpaid', classes: 'bg-amber-50 border-amber-200 text-amber-900', active: 'ring-2 ring-amber-400 bg-amber-100' },
+      { id: 'half_paid', emoji: '🌗', label: '0.5 Paid', hint: 'Half day paid leave', classes: 'bg-sky-50 border-sky-200 text-sky-900', active: 'ring-2 ring-sky-400 bg-sky-100', requiresPaidQuota: true },
+      { id: 'holiday', emoji: '🎉', label: 'Holiday', hint: 'Public / company holiday', classes: 'bg-purple-50 border-purple-200 text-purple-900', active: 'ring-2 ring-purple-400 bg-purple-100' },
+      { id: 'weekend', emoji: '🏖️', label: 'Weekend Off', hint: 'Sunday + 2nd & 4th Saturday', classes: 'bg-slate-50 border-slate-200 text-slate-800', active: 'ring-2 ring-slate-400 bg-slate-100', wide: true }
+    ];
+    
+    // Store day override status per YYYY-MM-DD key
+    let dayStatusMap = {};
+
+    // Calculates pay period dates according to selected cutoff rule (e.g., 26th to 25th)
+    function getPayPeriodDates(year, month, cycleMode) {
+      let startDate, endDate;
+      if (cycleMode === '26_to_25') {
+        startDate = new Date(year, month - 1, 26);
+        endDate = new Date(year, month, 25);
+      } else if (cycleMode === '21_to_20') {
+        startDate = new Date(year, month - 1, 21);
+        endDate = new Date(year, month, 20);
+      } else if (cycleMode === '16_to_15') {
+        startDate = new Date(year, month - 1, 16);
+        endDate = new Date(year, month, 15);
+      } else { // Standard calendar month
+        startDate = new Date(year, month, 1);
+        endDate = new Date(year, month + 1, 0);
+      }
+
+      const dates = [];
+      let cur = new Date(startDate);
+      while (cur <= endDate) {
+        dates.push(new Date(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      return { startDate, endDate, dates };
+    }
+
+    function getPaidQuotaValue() {
+      return Math.max(0, parseFloat(document.getElementById('paid-quota').value) || 0);
+    }
+
+    function paidLeaveCost(statusId) {
+      if (statusId === 'paid_leave') return 1;
+      if (statusId === 'half_paid') return 0.5;
+      return 0;
+    }
+
+    function isPaidLeaveStatus(statusId) {
+      return statusId === 'paid_leave' || statusId === 'half_paid';
+    }
+
+    function roundHalf(value) {
+      return Math.round(value * 10) / 10;
+    }
+
+    function formatLeaveDays(value) {
+      const n = roundHalf(value);
+      return Number.isInteger(n) ? String(n) : n.toFixed(1);
+    }
+
+    function getUsedPaidLeave(excludeKey) {
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const { dates } = getPayPeriodDates(currentDate.getFullYear(), currentDate.getMonth(), cycleMode);
+      let used = 0;
+      dates.forEach(d => {
+        const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        if (excludeKey && key === excludeKey) return;
+        const status = dayStatusMap[key] || getDefaultStatusForDay(d.getFullYear(), d.getMonth(), d.getDate());
+        used += paidLeaveCost(status);
+      });
+      return roundHalf(used);
+    }
+
+    function getRemainingPaidLeave(excludeKey) {
+      return roundHalf(Math.max(0, getPaidQuotaValue() - getUsedPaidLeave(excludeKey)));
+    }
+
+    function canApplyPaidStatus(statusId, excludeKey) {
+      if (!isPaidLeaveStatus(statusId)) return true;
+      return getRemainingPaidLeave(excludeKey) + 1e-9 >= paidLeaveCost(statusId);
+    }
+
+    function updatePaidLeaveControls() {
+      const remaining = getRemainingPaidLeave();
+      const rangeSel = document.getElementById('range-status');
+      if (rangeSel) {
+        [...rangeSel.options].forEach(opt => {
+          if (isPaidLeaveStatus(opt.value)) {
+            opt.disabled = !canApplyPaidStatus(opt.value);
+          }
+        });
+        if (isPaidLeaveStatus(rangeSel.value) && rangeSel.options[rangeSel.selectedIndex].disabled) {
+          rangeSel.value = 'work';
+        }
+      }
+      const autoBtn = document.querySelector('button[onclick="autoApplyPaidQuota()"]');
+      if (autoBtn) {
+        const locked = remaining < 0.5;
+        autoBtn.disabled = locked;
+        autoBtn.classList.toggle('opacity-40', locked);
+        autoBtn.classList.toggle('pointer-events-none', locked);
+        autoBtn.title = locked ? 'No paid leave balance left' : '';
+      }
+    }
+
+    function getStatusMeta(statusId) {
+      return DAY_STATUS_OPTIONS.find(opt => opt.id === statusId) || DAY_STATUS_OPTIONS[0];
+    }
+
+    function renderDayPickerOptions(currentStatus) {
+      const box = document.getElementById('day-picker-options');
+      const remaining = getRemainingPaidLeave(pickerDateKey);
+      box.innerHTML = DAY_STATUS_OPTIONS.map(opt => {
+        const selected = opt.id === currentStatus;
+        const locked = opt.requiresPaidQuota && !canApplyPaidStatus(opt.id, pickerDateKey);
+        const wide = opt.wide ? 'col-span-2' : '';
+        const state = locked
+          ? 'bg-slate-50 border-slate-200 text-slate-400'
+          : `${opt.classes}${selected ? ` ${opt.active}` : ''}`;
+        const check = selected && !locked
+          ? '<span class="ml-auto shrink-0 w-5 h-5 rounded-full bg-white/80 text-current flex items-center justify-center text-[11px] font-black shadow-sm">✓</span>'
+          : '';
+        let hint = opt.hint;
+        if (locked) {
+          hint = remaining <= 0
+            ? 'No paid leave balance left'
+            : `Need ${formatLeaveDays(paidLeaveCost(opt.id))} — only ${formatLeaveDays(remaining)} left`;
+        }
+        return `
+          <button type="button" data-status="${opt.id}" ${locked ? 'disabled' : ''} class="day-status-opt ${wide} ${state} border rounded-2xl px-3 py-3 text-left flex items-start gap-2.5 min-h-[64px] shadow-sm ${locked ? 'opacity-50 cursor-not-allowed grayscale' : ''}">
+            <span class="text-xl leading-none mt-0.5">${opt.emoji}</span>
+            <span class="min-w-0 flex-1">
+              <span class="flex items-center gap-2">
+                <span class="text-sm font-extrabold leading-tight">${opt.label}</span>
+                ${check}
+              </span>
+              <span class="block text-[11px] font-medium opacity-70 mt-0.5">${hint}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
+
+      box.querySelectorAll('[data-status]:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => applyDayStatus(btn.getAttribute('data-status')));
+      });
+    }
+
+    function openDayPicker(dateKey, dateObj, currentStatus, anchorEl) {
+      if (pickerCloseTimer) {
+        clearTimeout(pickerCloseTimer);
+        pickerCloseTimer = null;
+      }
+      pickerDateKey = dateKey;
+      pickerAnchorEl = anchorEl;
+
+      document.querySelectorAll('.cal-day-open').forEach(el => el.classList.remove('cal-day-open'));
+      if (anchorEl) anchorEl.classList.add('cal-day-open');
+
+      const title = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      document.getElementById('day-picker-title').innerText = title;
+      const meta = getStatusMeta(currentStatus);
+      const quota = getPaidQuotaValue();
+      const remaining = getRemainingPaidLeave();
+      document.getElementById('day-picker-current').innerText = `Current: ${meta.emoji} ${meta.label} · Paid left ${formatLeaveDays(remaining)}/${formatLeaveDays(quota)}`;
+      renderDayPickerOptions(currentStatus);
+
+      const overlay = document.getElementById('day-picker-overlay');
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+
+      requestAnimationFrame(() => {
+        overlay.classList.add('is-open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+    }
+
+    function closeDayPicker() {
+      const overlay = document.getElementById('day-picker-overlay');
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+      document.querySelectorAll('.cal-day-open').forEach(el => el.classList.remove('cal-day-open'));
+      pickerDateKey = null;
+      pickerAnchorEl = null;
+      overlay.setAttribute('aria-hidden', 'true');
+      pickerCloseTimer = setTimeout(() => {
+        overlay.classList.add('hidden');
+        pickerCloseTimer = null;
+      }, 220);
+    }
+
+    function applyDayStatus(statusId) {
+      if (!pickerDateKey) return;
+      if (!canApplyPaidStatus(statusId, pickerDateKey)) return;
+      dayStatusMap[pickerDateKey] = statusId;
+      closeDayPicker();
+      renderCalendarAndCalculate();
+    }
+
+    // Bulk applies selected status across a date range (From Day -> To Day)
+    function applyDateRange() {
+      const fromIdx = parseInt(document.getElementById('range-from').value) || 0;
+      const toIdx = parseInt(document.getElementById('range-to').value) || 0;
+      const status = document.getElementById('range-status').value;
+      const excludeWeekends = document.getElementById('range-exclude-weekends').checked;
+      if (!canApplyPaidStatus(status)) return;
+
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const { dates } = getPayPeriodDates(currentDate.getFullYear(), currentDate.getMonth(), cycleMode);
+
+      const start = Math.min(fromIdx, toIdx);
+      const end = Math.max(fromIdx, toIdx);
+      let remaining = getRemainingPaidLeave();
+
+      for (let i = start; i <= end; i++) {
+        if (dates[i]) {
+          const d = dates[i];
+          const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+
+          if (excludeWeekends && isDefaultOffDay(d.getFullYear(), d.getMonth(), d.getDate())) {
+            continue;
+          }
+
+          if (isPaidLeaveStatus(status)) {
+            const oldStatus = dayStatusMap[key] || getDefaultStatusForDay(d.getFullYear(), d.getMonth(), d.getDate());
+            const available = roundHalf(remaining + paidLeaveCost(oldStatus));
+            const need = paidLeaveCost(status);
+            if (available + 1e-9 < need) continue;
+            remaining = roundHalf(available - need);
+          }
+
+          dayStatusMap[key] = status;
+        }
+      }
+
+      renderCalendarAndCalculate();
+      closeSettings();
+    }
+
+    function switchMobileTab(tabName) {
+      const secCalendar = document.getElementById('section-calendar');
+      const secSummary = document.getElementById('section-summary');
+      const btnCalendar = document.getElementById('tab-btn-calendar');
+      const btnSummary = document.getElementById('tab-btn-summary');
+
+      if (tabName === 'calendar') {
+        secCalendar.classList.remove('hidden');
+        secSummary.classList.add('hidden', 'lg:block');
+        btnCalendar.className = 'flex-1 py-2 text-xs font-extrabold rounded-lg transition-all bg-white text-brand-700 shadow-sm flex items-center justify-center space-x-1.5';
+        btnSummary.className = 'flex-1 py-2 text-xs font-extrabold rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5';
+      } else {
+        secCalendar.classList.add('hidden');
+        secSummary.classList.remove('hidden');
+        secSummary.classList.add('block');
+        btnSummary.className = 'flex-1 py-2 text-xs font-extrabold rounded-lg transition-all bg-white text-brand-700 shadow-sm flex items-center justify-center space-x-1.5';
+        btnCalendar.className = 'flex-1 py-2 text-xs font-extrabold rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5';
+      }
+    }
+
+    let settingsCloseTimer = null;
+    let salaryOnboardingIsEdit = false;
+
+    function isMobileView() {
+      return window.matchMedia('(max-width: 1023px)').matches;
+    }
+
+    function hasValidSalary() {
+      return (parseFloat(document.getElementById('monthly-salary').value) || 0) > 0;
+    }
+
+    function revealMobileApp() {
+      document.body.classList.add('mobile-ready');
+      document.getElementById('mobile-main-content').classList.remove('hidden-until-salary');
+      document.getElementById('mobile-bottom-bar').classList.remove('hidden-until-salary');
+    }
+
+    function openSalaryOnboarding(isEdit = false) {
+      salaryOnboardingIsEdit = isEdit;
+      if (isEdit) {
+        const settingsOverlay = document.getElementById('settings-overlay');
+        settingsOverlay.classList.remove('is-open');
+        settingsOverlay.classList.add('hidden');
+        settingsOverlay.setAttribute('aria-hidden', 'true');
+      }
+      const overlay = document.getElementById('salary-onboarding-overlay');
+      const salaryEl = document.getElementById('monthly-salary');
+      const currencyEl = document.getElementById('currency-select');
+      document.getElementById('mobile-salary-input').value = salaryEl.value || '';
+      document.getElementById('mobile-currency-select').value = currencyEl.value;
+      document.getElementById('salary-onboarding-error').classList.add('hidden');
+      document.getElementById('salary-onboarding-title').innerText = isEdit ? 'Update Monthly Salary' : 'Enter Monthly Salary';
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      setTimeout(() => document.getElementById('mobile-salary-input').focus(), 50);
+    }
+
+    function closeSalaryOnboarding() {
+      const overlay = document.getElementById('salary-onboarding-overlay');
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      if (!pickerDateKey && document.getElementById('settings-overlay').classList.contains('hidden')) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    function submitSalaryOnboarding() {
+      const val = parseFloat(document.getElementById('mobile-salary-input').value);
+      const errorEl = document.getElementById('salary-onboarding-error');
+      if (!val || val <= 0) {
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      errorEl.classList.add('hidden');
+      document.getElementById('monthly-salary').value = val;
+      document.getElementById('currency-select').value = document.getElementById('mobile-currency-select').value;
+      saveSalaryAsDefault();
+      closeSalaryOnboarding();
+      if (isMobileView()) revealMobileApp();
+      if (salaryOnboardingIsEdit) closeSettings();
+      renderCalendarAndCalculate();
+    }
+
+    function initMobileExperience() {
+      if (!isMobileView()) {
+        document.getElementById('mobile-main-content').classList.remove('hidden-until-salary');
+        document.getElementById('salary-onboarding-overlay').classList.add('hidden');
+        return;
+      }
+      if (hasValidSalary()) {
+        revealMobileApp();
+      } else {
+        openSalaryOnboarding(false);
+      }
+    }
+
+    function getCycleLabel(cycleMode) {
+      const labels = {
+        '26_to_25': '26th–25th cycle',
+        'standard': 'Standard month',
+        '21_to_20': '21st–20th cycle',
+        '16_to_15': '16th–15th cycle'
+      };
+      return labels[cycleMode] || 'Custom cycle';
+    }
+
+    function getBasisLabel(basisRule) {
+      const labels = {
+        calendar: 'Cycle-day wage rule',
+        working: 'Work-day wage rule',
+        fixed30: 'Fixed 30-day rule'
+      };
+      return labels[basisRule] || 'Custom wage rule';
+    }
+
+    function updateSettingsSummary() {
+      const summaryEl = document.getElementById('settings-summary');
+      if (!summaryEl) return;
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const paidQuota = formatLeaveDays(getPaidQuotaValue());
+      const basisRule = document.getElementById('basis-rule').value;
+      const allowances = parseFloat(document.getElementById('allowances').value) || 0;
+      const deductions = parseFloat(document.getElementById('deductions').value) || 0;
+      let summary = `${getCycleLabel(cycleMode)} · ${paidQuota} paid leave days · ${getBasisLabel(basisRule)}`;
+      if (allowances > 0 || deductions > 0) {
+        summary += ` · +${allowances} / -${deductions} adj.`;
+      }
+      summaryEl.querySelector('span').innerText = summary;
+    }
+
+    function openSettings() {
+      if (settingsCloseTimer) {
+        clearTimeout(settingsCloseTimer);
+        settingsCloseTimer = null;
+      }
+      const overlay = document.getElementById('settings-overlay');
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => {
+        overlay.classList.add('is-open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+    }
+
+    function closeSettings() {
+      const overlay = document.getElementById('settings-overlay');
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+      overlay.setAttribute('aria-hidden', 'true');
+      settingsCloseTimer = setTimeout(() => {
+        overlay.classList.add('hidden');
+        settingsCloseTimer = null;
+      }, 220);
+    }
+
+    function changeMonth(offset) {
+      currentDate.setMonth(currentDate.getMonth() + offset);
+      renderCalendarAndCalculate();
+    }
+
+    function goToCurrentMonth() {
+      currentDate = new Date();
+      renderCalendarAndCalculate();
+    }
+
+    function formatDateKey(year, month, day) {
+      const m = String(month + 1).padStart(2, '0');
+      const d = String(day).padStart(2, '0');
+      return `${year}-${m}-${d}`;
+    }
+
+    function formatCurrency(amount, currency = '₹') {
+      const val = isNaN(amount) ? 0 : amount;
+      const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(val);
+      return `${currency}${formatted}`;
+    }
+
+    function getSaturdayOccurrenceInMonth(year, month, day) {
+      const d = new Date(year, month, day);
+      if (d.getDay() !== 6) return 0;
+      return Math.ceil(day / 7);
+    }
+
+    function isDefaultOffDay(year, month, day) {
+      const d = new Date(year, month, day);
+      const dayOfWeek = d.getDay();
+      if (dayOfWeek === 0) return true;
+      if (dayOfWeek !== 6) return false;
+      const nthSaturday = getSaturdayOccurrenceInMonth(year, month, day);
+      return nthSaturday === 2 || nthSaturday === 4;
+    }
+
+    function getDefaultStatusForDay(year, month, day) {
+      return isDefaultOffDay(year, month, day) ? 'weekend' : 'work';
+    }
+
+    function handleCalendarDayClick(dateKey, dateObj, currentStatus, anchorEl) {
+      openDayPicker(dateKey, dateObj, currentStatus, anchorEl);
+    }
+
+    function applyPreset(presetType) {
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const { dates } = getPayPeriodDates(currentDate.getFullYear(), currentDate.getMonth(), cycleMode);
+
+      dates.forEach(d => {
+        const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        const dayOfWeek = d.getDay();
+
+        if (presetType === 'std_off') {
+          dayStatusMap[key] = getDefaultStatusForDay(d.getFullYear(), d.getMonth(), d.getDate());
+        } else if (presetType === 'mon_fri') {
+          dayStatusMap[key] = (dayOfWeek === 0 || dayOfWeek === 6) ? 'weekend' : 'work';
+        } else if (presetType === 'mon_sat') {
+          dayStatusMap[key] = (dayOfWeek === 0) ? 'weekend' : 'work';
+        }
+      });
+      renderCalendarAndCalculate();
+    }
+
+    function resetMonthToWork() {
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const { dates } = getPayPeriodDates(currentDate.getFullYear(), currentDate.getMonth(), cycleMode);
+
+      dates.forEach(d => {
+        const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        dayStatusMap[key] = 'work';
+      });
+      renderCalendarAndCalculate();
+    }
+
+    function autoApplyPaidQuota() {
+      if (getRemainingPaidLeave() < 0.5) return;
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const { dates } = getPayPeriodDates(currentDate.getFullYear(), currentDate.getMonth(), cycleMode);
+      const quota = parseFloat(document.getElementById('paid-quota').value) || 0;
+
+      let usedPaid = 0;
+
+      dates.forEach(d => {
+        const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        const st = dayStatusMap[key] || getDefaultStatusForDay(d.getFullYear(), d.getMonth(), d.getDate());
+
+        if (st === 'lop' || st === 'paid_leave') {
+          if (usedPaid + 1.0 <= quota) {
+            dayStatusMap[key] = 'paid_leave';
+            usedPaid += 1.0;
+          } else if (usedPaid < quota) {
+            dayStatusMap[key] = 'half_paid';
+            usedPaid += 0.5;
+          } else {
+            dayStatusMap[key] = 'lop';
+          }
+        } else if (st === 'half_lop' || st === 'half_paid') {
+          if (usedPaid + 0.5 <= quota) {
+            dayStatusMap[key] = 'half_paid';
+            usedPaid += 0.5;
+          } else {
+            dayStatusMap[key] = 'half_lop';
+          }
+        }
+      });
+      renderCalendarAndCalculate();
+    }
+
+    function printPayslip() {
+      const secSummary = document.getElementById('section-summary');
+      const wasMobileHidden = secSummary.classList.contains('hidden');
+      secSummary.classList.remove('hidden');
+      secSummary.classList.add('block');
+
+      const restore = () => {
+        if (wasMobileHidden && window.matchMedia('(max-width: 1023px)').matches) {
+          secSummary.classList.add('hidden');
+          secSummary.classList.remove('block');
+        }
+        window.removeEventListener('afterprint', restore);
+      };
+      window.addEventListener('afterprint', restore);
+
+      window.print();
+    }
+
+    function getSavedDefaults() {
+      try {
+        return JSON.parse(localStorage.getItem('calpay_defaults') || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function applySavedSalaryDefault() {
+      const defaults = getSavedDefaults();
+      const salaryEl = document.getElementById('monthly-salary');
+      const currencyEl = document.getElementById('currency-select');
+      salaryEl.value = (defaults.salary !== undefined && defaults.salary !== null && defaults.salary !== '')
+        ? defaults.salary
+        : '';
+      if (defaults.currency) currencyEl.value = defaults.currency;
+    }
+
+    function saveSalaryAsDefault() {
+      const salary = document.getElementById('monthly-salary').value;
+      const currency = document.getElementById('currency-select').value;
+      localStorage.setItem('calpay_defaults', JSON.stringify({ salary, currency }));
+    }
+
+    function resetCalculator() {
+      currentDate = new Date();
+      dayStatusMap = {};
+      document.getElementById('payroll-cycle').value = '26_to_25';
+      document.getElementById('paid-quota').value = 2.0;
+      document.getElementById('basis-rule').value = 'calendar';
+      document.getElementById('allowances').value = 0;
+      document.getElementById('deductions').value = 0;
+      applySavedSalaryDefault();
+      renderCalendarAndCalculate();
+    }
+
+    function renderCalendarAndCalculate() {
+      updatePaidLeaveControls();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const currency = document.getElementById('currency-select').value;
+      const salary = parseFloat(document.getElementById('monthly-salary').value) || 0;
+      const cycleMode = document.getElementById('payroll-cycle').value;
+      const paidQuota = Math.max(0, parseFloat(document.getElementById('paid-quota').value) || 0);
+      const basisRule = document.getElementById('basis-rule').value;
+      const allowances = Math.max(0, parseFloat(document.getElementById('allowances').value) || 0);
+      const deductions = Math.max(0, parseFloat(document.getElementById('deductions').value) || 0);
+
+      // Retrieve cycle dates
+      const { startDate, endDate, dates } = getPayPeriodDates(year, month, cycleMode);
+      const totalDaysInCycle = dates.length;
+
+      // Update Header Title Label based on Cycle
+      let monthName = '';
+      if (cycleMode === '26_to_25' || cycleMode === '21_to_20' || cycleMode === '16_to_15') {
+        const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const salaryMonth = currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        monthName = `${startStr} – ${endStr} (${salaryMonth} Cycle)`;
+      } else {
+        monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      }
+      document.getElementById('current-month-label').innerText = monthName;
+
+      // Update Range Selector Dropdowns dynamically
+      const fromSel = document.getElementById('range-from');
+      const toSel = document.getElementById('range-to');
+      if (fromSel && toSel) {
+        const curFrom = parseInt(fromSel.value) || 0;
+        const curTo = parseInt(toSel.value) || (totalDaysInCycle - 1);
+        
+        let fromOpts = '';
+        let toOpts = '';
+        dates.forEach((dObj, idx) => {
+          const dStr = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          fromOpts += `<option value="${idx}" ${idx === Math.min(curFrom, totalDaysInCycle - 1) ? 'selected' : ''}>${dStr} (Day ${idx + 1})</option>`;
+          toOpts += `<option value="${idx}" ${idx === Math.min(curTo, totalDaysInCycle - 1) ? 'selected' : ''}>${dStr} (Day ${idx + 1})</option>`;
+        });
+        fromSel.innerHTML = fromOpts;
+        toSel.innerHTML = toOpts;
+      }
+
+      // Days count variables
+      let countWork = 0;
+      let countPaidLeave = 0;
+      let countLop = 0;
+      let countHoliday = 0;
+      let countWeekend = 0;
+
+      // Render Calendar Grid HTML
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = '';
+
+      // Day headers
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      daysOfWeek.forEach(d => {
+        const th = document.createElement('div');
+        th.className = 'font-bold text-slate-400 py-1 text-[11px] uppercase';
+        th.innerText = d;
+        grid.appendChild(th);
+      });
+
+      // Padding for month start according to startDate day of week
+      const firstDayIndex = startDate.getDay();
+      for (let i = 0; i < firstDayIndex; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'py-3 text-slate-200 text-xs opacity-20';
+        empty.innerText = '•';
+        grid.appendChild(empty);
+      }
+
+      // Populate Days in Cycle
+      dates.forEach(dObj => {
+        const dYear = dObj.getFullYear();
+        const dMonth = dObj.getMonth();
+        const dDay = dObj.getDate();
+        const key = formatDateKey(dYear, dMonth, dDay);
+        let status = dayStatusMap[key];
+
+        if (!status) {
+          status = getDefaultStatusForDay(dYear, dMonth, dDay);
+          dayStatusMap[key] = status;
+        }
+
+        // Tallying day counts
+        if (status === 'work') countWork += 1.0;
+        else if (status === 'paid_leave') countPaidLeave += 1.0;
+        else if (status === 'half_paid') {
+          countPaidLeave += 0.5;
+          countWork += 0.5;
+        } else if (status === 'lop') countLop += 1.0;
+        else if (status === 'half_lop') {
+          countLop += 0.5;
+          countWork += 0.5;
+        } else if (status === 'holiday') countHoliday += 1.0;
+        else if (status === 'weekend') countWeekend += 1.0;
+
+        // Visual Styling for Calendar Day Button
+        let cellBg = 'bg-emerald-500 text-white hover:scale-105';
+        let cellTag = '💼 Work';
+
+        if (status === 'paid_leave') {
+          cellBg = 'bg-blue-500 text-white font-bold ring-2 ring-blue-300 hover:scale-105';
+          cellTag = '🌴 Paid L.';
+        } else if (status === 'half_paid') {
+          cellBg = 'bg-sky-400 text-white font-bold hover:scale-105';
+          cellTag = '🌗 0.5 Paid';
+        } else if (status === 'lop') {
+          cellBg = 'bg-rose-500 text-white font-bold ring-2 ring-rose-300 hover:scale-105 animate-pulse';
+          cellTag = '⚠️ LOP';
+        } else if (status === 'half_lop') {
+          cellBg = 'bg-amber-500 text-white font-bold hover:scale-105';
+          cellTag = '🌘 0.5 LOP';
+        } else if (status === 'holiday') {
+          cellBg = 'bg-purple-500 text-white font-bold hover:scale-105';
+          cellTag = '🎉 Holiday';
+        } else if (status === 'weekend') {
+          cellBg = 'bg-slate-200 text-slate-600 font-medium hover:bg-slate-300';
+          cellTag = '🏖️ Off';
+        }
+
+        const showMonthLabel = (cycleMode !== 'standard' && (dDay === 26 || dDay === 21 || dDay === 16 || dDay === 1));
+        const dateNumText = showMonthLabel 
+          ? `${dObj.toLocaleDateString('en-US', { month: 'short' })} ${dDay}` 
+          : `${dDay}`;
+
+        const dayBtn = document.createElement('button');
+        dayBtn.type = 'button';
+        dayBtn.title = 'Tap to change day status';
+        dayBtn.setAttribute('aria-label', `${dateNumText}, ${cellTag}. Tap to change status`);
+        dayBtn.onclick = () => handleCalendarDayClick(key, dObj, status, dayBtn);
+        dayBtn.className = `py-1 sm:py-1.5 rounded-xl text-xs transition-all flex flex-col items-center justify-center p-0.5 sm:p-1 cursor-pointer shadow-sm min-h-[46px] sm:min-h-[52px] ${cellBg}`;
+
+        dayBtn.innerHTML = `
+          <span class="text-[10px] sm:text-[11px] font-extrabold leading-tight">${dateNumText}</span>
+          <span class="text-[8px] sm:text-[9px] uppercase font-bold truncate max-w-full px-0.5 mt-0.5 opacity-90">${cellTag}</span>
+        `;
+        grid.appendChild(dayBtn);
+      });
+
+      // Update Live Legend Header Counters
+      document.getElementById('cnt-work').innerText = `${countWork} Work`;
+      document.getElementById('cnt-paid').innerText = `${countPaidLeave} Paid`;
+      document.getElementById('cnt-lop').innerText = `${countLop} LOP`;
+      document.getElementById('cnt-weekend').innerText = `${countWeekend} Off`;
+
+      // Automatic quota validation: If paid leaves taken exceed available quota, convert excess to LOP
+      let effectivePaidLeaves = countPaidLeave;
+      let effectiveLopDays = countLop;
+
+      if (countPaidLeave > paidQuota) {
+        const excess = countPaidLeave - paidQuota;
+        effectivePaidLeaves = paidQuota;
+        effectiveLopDays += excess;
+      }
+
+      const remainingPaidQuota = Math.max(0, paidQuota - effectivePaidLeaves);
+
+      // Daily Rate Calculation
+      let divisorDays = totalDaysInCycle;
+      let divisorLabel = `÷ ${totalDaysInCycle} Cycle Days`;
+
+      if (basisRule === 'calendar') {
+        divisorDays = totalDaysInCycle;
+        divisorLabel = `÷ ${totalDaysInCycle} Cycle Days`;
+      } else if (basisRule === 'working') {
+        const workBase = (countWork + countPaidLeave + countHoliday);
+        divisorDays = workBase > 0 ? workBase : 22;
+        divisorLabel = `÷ ${divisorDays} Work Days`;
+      } else if (basisRule === 'fixed30') {
+        divisorDays = 30;
+        divisorLabel = `÷ Fixed 30 Days Rule`;
+      }
+
+      const perDayRate = salary / divisorDays;
+      const lopDeductionAmount = effectiveLopDays * perDayRate;
+      const netSalary = Math.max(0, salary + allowances - lopDeductionAmount - deductions);
+
+      // Update Overview Stat Cards
+      document.getElementById('stat-base').innerText = formatCurrency(salary, currency);
+      document.getElementById('stat-per-day').innerText = formatCurrency(perDayRate, currency);
+      document.getElementById('stat-divisor-label').innerText = divisorLabel;
+      document.getElementById('stat-lop-count').innerText = `${effectiveLopDays} ${effectiveLopDays === 1 ? 'Day' : 'Days'}`;
+      document.getElementById('stat-lop-amt').innerText = `Deduction: -${formatCurrency(lopDeductionAmount, currency)}`;
+      document.getElementById('stat-net').innerText = formatCurrency(netSalary, currency);
+
+      const mobileNet = document.getElementById('mobile-stat-net');
+      const mobileSub = document.getElementById('mobile-stat-sub');
+      if (mobileNet) mobileNet.innerText = formatCurrency(netSalary, currency);
+      if (mobileSub) {
+        mobileSub.innerText = effectiveLopDays > 0
+          ? `${effectiveLopDays} LOP day(s) · -${formatCurrency(lopDeductionAmount, currency)}`
+          : 'Full salary · zero LOP';
+        mobileSub.className = effectiveLopDays > 0
+          ? 'text-[10px] font-semibold text-rose-600 truncate'
+          : 'text-[10px] font-semibold text-emerald-600 truncate';
+      }
+
+      // Update Status Banner
+      const statusBanner = document.getElementById('status-banner');
+      statusBanner.className = 'hidden lg:block rounded-2xl border p-4 transition-all duration-300 no-print ';
+      if (effectiveLopDays > 0) {
+        statusBanner.classList.add('bg-rose-50', 'border-rose-200', 'text-rose-900');
+        statusBanner.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="p-2 bg-rose-100 text-rose-600 rounded-xl">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold">Loss of Pay (LOP) Applied</p>
+                <p class="text-xs text-rose-700">You have <strong>${effectiveLopDays} LOP day(s)</strong> in this cycle. Total deduction of <strong>${formatCurrency(lopDeductionAmount, currency)}</strong> will be subtracted from salary.</p>
+              </div>
+            </div>
+            <span class="text-xs font-extrabold text-rose-700 bg-rose-100 px-3 py-1 rounded-full border border-rose-200">-${formatCurrency(lopDeductionAmount, currency)}</span>
+          </div>
+        `;
+      } else {
+        statusBanner.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-900');
+        statusBanner.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold">Full Salary Payable (Zero LOP)</p>
+              <p class="text-xs text-emerald-700">No unpaid leave days detected. Full net salary of <strong>${formatCurrency(netSalary, currency)}</strong> is calculated for ${monthName}.</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // Update Progress Bar
+      document.getElementById('bar-total-days').innerText = `${totalDaysInCycle} Cycle Days`;
+      document.getElementById('bar-work').style.width = `${(countWork / totalDaysInCycle) * 100}%`;
+      document.getElementById('bar-paid').style.width = `${(effectivePaidLeaves / totalDaysInCycle) * 100}%`;
+      document.getElementById('bar-lop').style.width = `${(effectiveLopDays / totalDaysInCycle) * 100}%`;
+      document.getElementById('bar-holiday').style.width = `${(countHoliday / totalDaysInCycle) * 100}%`;
+
+      document.getElementById('lbl-worked').innerText = `${countWork} d`;
+      document.getElementById('lbl-paid').innerText = `${effectivePaidLeaves} d`;
+      document.getElementById('lbl-lop').innerText = `${effectiveLopDays} d`;
+      document.getElementById('lbl-left').innerText = `${remainingPaidQuota} d`;
+
+      // Update Printable Payslip Section
+      document.getElementById('slip-month-name').innerText = `Period: ${monthName}`;
+      document.getElementById('slip-gen-date').innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      document.getElementById('slip-gross').innerText = formatCurrency(salary, currency);
+      document.getElementById('slip-basis').innerText = `${formatCurrency(perDayRate, currency)} / day (${divisorLabel})`;
+      document.getElementById('slip-worked-count').innerText = `${countWork + countHoliday} Days`;
+      document.getElementById('slip-paid-count').innerText = `${effectivePaidLeaves} Days`;
+      document.getElementById('slip-lop-days').innerText = `${effectiveLopDays} Days`;
+      document.getElementById('slip-lop-deduction').innerText = `-${formatCurrency(lopDeductionAmount, currency)}`;
+      document.getElementById('slip-net-final').innerText = formatCurrency(netSalary, currency);
+
+      updateSettingsSummary();
+      lucide.createIcons();
+    }
+
+    function saveCurrentMonthRecord() {
+      const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const netSalary = document.getElementById('stat-net').innerText;
+      const lopDays = document.getElementById('stat-lop-count').innerText;
+
+      const record = {
+        id: Date.now(),
+        month: monthName,
+        netSalary: netSalary,
+        lopDays: lopDays
+      };
+
+      let history = JSON.parse(localStorage.getItem('calpay_history') || '[]');
+      history.unshift(record);
+      if (history.length > 5) history = history.slice(0, 5);
+
+      localStorage.setItem('calpay_history', JSON.stringify(history));
+      saveSalaryAsDefault();
+      loadHistoryRecords();
+    }
+
+    function loadHistoryRecords() {
+      const container = document.getElementById('history-container');
+      const history = JSON.parse(localStorage.getItem('calpay_history') || '[]');
+
+      if (history.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic">No saved month records yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = history.map(item => `
+        <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs transition-colors">
+          <div>
+            <p class="font-bold text-slate-800">${item.month}</p>
+            <p class="text-[10px] text-slate-500">LOP: <span class="font-bold text-rose-600">${item.lopDays}</span></p>
+          </div>
+          <p class="font-extrabold text-emerald-600 text-sm">${item.netSalary}</p>
+        </div>
+      `).join('');
+    }
+
+    window.onload = function() {
+      const inputs = ['monthly-salary', 'currency-select', 'payroll-cycle', 'paid-quota', 'basis-rule', 'allowances', 'deductions'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', renderCalendarAndCalculate);
+          el.addEventListener('change', renderCalendarAndCalculate);
+        }
+      });
+
+      const mobileSalaryInput = document.getElementById('mobile-salary-input');
+      if (mobileSalaryInput) {
+        mobileSalaryInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') submitSalaryOnboarding();
+        });
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (pickerDateKey) closeDayPicker();
+        else if (!document.getElementById('settings-overlay').classList.contains('hidden')) closeSettings();
+        else if (salaryOnboardingIsEdit && !document.getElementById('salary-onboarding-overlay').classList.contains('hidden')) closeSalaryOnboarding();
+      });
+
+      window.addEventListener('resize', () => {
+        if (!isMobileView()) {
+          document.getElementById('mobile-main-content').classList.remove('hidden-until-salary');
+          document.getElementById('mobile-bottom-bar').classList.remove('hidden-until-salary');
+          closeSalaryOnboarding();
+        } else if (hasValidSalary()) {
+          revealMobileApp();
+        }
+      });
+
+      applySavedSalaryDefault();
+      renderCalendarAndCalculate();
+      loadHistoryRecords();
+      initMobileExperience();
+    };
+  </script>
+</body>
+</html>
