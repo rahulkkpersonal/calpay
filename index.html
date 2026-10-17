@@ -1249,6 +1249,8 @@
       $("title").textContent = q.title;
       $("question").textContent = "QUESTION: " + q.q;
       $("solution").replaceChildren();
+      const board = document.querySelector(".board");
+      if (board) board.scrollTop = 0;
       $("counter").textContent = `QUESTION ${state.page + 1} / ${qs.length}`;
       $("status").textContent = `Page ${state.page + 1} of ${qs.length} · Ready to write the solution`;
       explainInPanel("Ready to solve?", "മൂന്ന് ചോദ്യങ്ങളുടെയും മലയാളം വിശദീകരണം കേൾക്കാൻ Play Malayalam narration അമർത്തുക. ബോർഡിലെ ഘട്ടങ്ങൾ പ്രത്യേകം നിയന്ത്രിക്കാം.");
@@ -1418,6 +1420,15 @@
       explainInPanel(prior ? prior[0] : "Ready to solve?", prior ? prior[2] : "ഓരോ ഘട്ടവും വിശദീകരിച്ചുകൊണ്ട് ബോർഡിൽ എഴുതാം.");
       updateStatus(); updateStepButtons();
     }
+    function focusMobileLesson() {
+      if (!window.matchMedia("(max-width: 600px)").matches) return;
+      requestAnimationFrame(() => {
+        const presenter = document.querySelector(".presenter");
+        if (!presenter) return;
+        const top = window.scrollY + presenter.getBoundingClientRect().top - 10;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      });
+    }
     function play() {
       // The audio is the single clock. The board is advanced by timeupdate,
       // so Play solution cannot drift away from the Malayalam narration.
@@ -1428,6 +1439,7 @@
         renderPage();
         lessonAudio.currentTime = start;
       }
+      focusMobileLesson();
       lessonAudio.play().catch(() => {
         $("speakerText").textContent = "Audio could not start. Keep the HTML and MP3 file in the same folder, then try again.";
       });
@@ -1515,6 +1527,7 @@
       const [start] = pageAudioRange(page);
       lessonAudio.currentTime = start;
       syncBoardToAudio();
+      focusMobileLesson();
       lessonAudio.play().catch(() => {
         $("speakerText").textContent = "Audio could not start. Keep the HTML and MP3 file in the same folder, then try again.";
       });
