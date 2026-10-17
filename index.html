@@ -1317,6 +1317,7 @@
       const [start] = stepAudioRange(state.page, target);
       lessonAudio.currentTime = start;
       syncBoardToAudio();
+      focusMobileLesson();
       if (playAudio) lessonAudio.play().catch(() => { });
     }
     function syncBoardToAudio() {
@@ -1403,6 +1404,7 @@
         seekSyncedStep(state.step, true);
         return;
       }
+      focusMobileLesson();
       if (state.typing) finishTyping();
       else writeNext();
     }
@@ -1413,6 +1415,7 @@
       }
       stopPlayback();
       if (state.step <= 0) return;
+      focusMobileLesson();
       state.step--;
       const items = $("solution").querySelectorAll(".step");
       if (items.length) items[items.length - 1].remove();
